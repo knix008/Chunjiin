@@ -1,20 +1,26 @@
 # 천지인 한글 입력기 (Chunjiin Korean Input Method)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Language: C](https://img.shields.io/badge/Language-C-blue.svg)](https://en.wikipedia.org/wiki/C_(programming_language))
+[![GUI: GTK3](https://img.shields.io/badge/GUI-GTK3-green.svg)](https://www.gtk.org/)
+
 C언어와 GTK3로 구현한 천지인 한글 입력 방식 애플리케이션입니다.
 
 ## 소개
 
-천지인(天地人) 입력 방식은 한글의 창제 원리를 따라 만들어진 휴대폰 키패드 입력 방식입니다.
-이 프로그램은 원래 Java/Android로 작성된 코드를 C 언어로 포팅하고 GTK3 GUI를 추가한 버전입니다.
+천지인(天地人) 입력 방식은 한글의 창제 원리를 따라 만들어진 휴대폰 키패드 입력 방식입니다. 천(天, 하늘 - 가로획 ·), 지(地, 땅 - 세로획 ㅣ), 인(人, 사람 - 가로획 ㅡ)의 세 가지 기본 요소로 모든 한글을 입력할 수 있습니다.
+
+이 프로그램은 원래 Java/Android로 작성된 코드([sigigi/dotnet_chunjiin](https://github.com/sigigi/dotnet_chunjiin))를 C 언어로 포팅하고 GTK3 GUI를 추가한 버전입니다.
 
 ### 특징
 
-- ✅ 완전한 한글 입력 지원 (초성, 중성, 종성, 겹받침)
-- ✅ 영문 입력 지원 (대문자/소문자)
-- ✅ 숫자 입력 지원
-- ✅ 4가지 입력 모드: 한글, 영문(대), 영문(소), 숫자
-- ✅ 직관적인 GUI 인터페이스
-- ✅ 정확한 wchar_t/UTF-8 변환으로 안정적인 한글 표시
+- ✅ **완전한 한글 입력 지원** - 초성, 중성, 종성, 11가지 겹받침 모두 지원
+- ✅ **영문 입력 지원** - 대문자/소문자 모드 전환
+- ✅ **숫자 입력 지원** - 0-9 직접 입력
+- ✅ **4가지 입력 모드** - 한글, 영문(대), 영문(소), 숫자
+- ✅ **직관적인 GUI** - GTK3 기반의 깔끔한 인터페이스
+- ✅ **안정적인 문자 처리** - wchar_t/UTF-8 변환으로 정확한 한글 표시
+- ✅ **크로스 플랫폼** - Linux, Windows (Cygwin/MSYS2) 지원
 
 ## 빌드 요구사항
 
@@ -48,8 +54,9 @@ pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-gtk3
 ## 빌드 방법
 
 ```bash
-# 프로젝트 디렉토리로 이동
-cd Chunjiin
+# 저장소 클론 (또는 소스 다운로드)
+git clone https://github.com/sigigi/dotnet_chunjiin.git
+cd dotnet_chunjiin/Chunjiin
 
 # 빌드
 make
@@ -61,7 +68,23 @@ make
 
 # 빌드와 실행을 한번에
 make run
+
+# 빌드 파일 정리
+make clean
+
+# 시스템에 설치 (선택사항)
+sudo make install
 ```
+
+### Makefile 타겟
+
+| 타겟 | 설명 |
+|------|------|
+| `make` | 애플리케이션 빌드 |
+| `make run` | 빌드 후 실행 |
+| `make clean` | 빌드 파일 제거 |
+| `make install` | /usr/local/bin에 설치 |
+| `make help` | 도움말 표시 |
 
 ## 사용 방법
 
@@ -151,15 +174,25 @@ make run
 
 ```
 Chunjiin/
-├── chunjiin.h           # 헤더 파일 (구조체 및 함수 선언)
-├── chunjiin.c           # 핵심 로직 및 유틸리티
-├── chunjiin_hangul.c    # 한글 입력 로직 (hangul_make, write 함수)
-├── main.c               # GTK GUI 애플리케이션
-├── Makefile             # 빌드 설정
-├── README.md            # 이 파일
-├── Chunjiin.java        # 원본 Java 코드 (참고용)
+├── chunjiin.h            # 헤더 파일 (구조체 및 함수 선언)
+├── chunjiin.c            # 핵심 로직 및 유틸리티
+├── chunjiin_hangul.c     # 한글 입력 로직 (hangul_make, eng_make, num_make, write 함수)
+├── main.c                # GTK3 GUI 애플리케이션
+├── Makefile              # 빌드 설정
+├── README.md             # 이 문서
+├── .gitignore            # Git 제외 파일 목록
+├── Chunjiin.java         # 원본 Java 코드 (참고용)
 └── Chunjiinactivity.java # 원본 Android Activity (참고용)
 ```
+
+### 코드 구조
+
+| 파일 | 주요 함수 | 설명 |
+|------|----------|------|
+| **chunjiin.h** | - | 데이터 구조체 및 함수 프로토타입 정의 |
+| **chunjiin.c** | `get_unicode()`<br>`check_double()`<br>`change_mode()` | 한글 유니코드 조합, 겹받침 처리, 모드 전환 |
+| **chunjiin_hangul.c** | `hangul_make()`<br>`eng_make()`<br>`num_make()`<br>`write_hangul()`<br>`write_engnum()` | 각 모드별 입력 처리 및 텍스트 출력 |
+| **main.c** | `wchar_to_utf8()`<br>`on_button_clicked()`<br>`activate()` | GTK GUI, 이벤트 처리, UTF-8 변환 |
 
 ## 기술 세부사항
 
@@ -246,24 +279,92 @@ pkg-config --modversion gtk+-3.0
 
 이 문제는 wchar_t to UTF-8 변환 이슈로 이미 수정되었습니다. 최신 버전을 사용하고 있는지 확인하세요.
 
+### 컴파일 경고 발생
+
+일부 시스템에서 `-Wdeprecated-declarations` 경고가 발생할 수 있습니다. 이는 GTK3의 폰트 설정 함수 때문이며 정상적으로 동작합니다.
+
+## 개발 정보
+
+### 빌드 환경
+
+- **컴파일러**: GCC 4.8 이상
+- **표준**: C99
+- **의존성**: GTK+ 3.0, GLib 2.0
+
+### 메모리 관리
+
+- 텍스트 버퍼 최대 크기: 1024 wchar_t (약 4KB)
+- 동적 메모리 할당 최소화
+- GTK 위젯 자동 메모리 관리
+
+### 디버깅
+
+```bash
+# 디버그 정보 포함하여 빌드
+gcc -g -Wall -Wextra $(pkg-config --cflags gtk+-3.0) *.c -o chunjiin $(pkg-config --libs gtk+-3.0)
+
+# Valgrind로 메모리 누수 체크
+valgrind --leak-check=full ./chunjiin
+
+# GDB 디버거 실행
+gdb ./chunjiin
+```
+
 ## 기여
 
 버그 리포트나 개선 제안은 환영합니다!
 
-## 참고
+### 기여 방법
+
+1. 이 저장소를 Fork 합니다
+2. 새 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
+3. 변경사항을 커밋합니다 (`git commit -m 'Add amazing feature'`)
+4. 브랜치에 Push 합니다 (`git push origin feature/amazing-feature`)
+5. Pull Request를 생성합니다
+
+### 코딩 스타일
+
+- 들여쓰기: 스페이스 4칸
+- 변수명: snake_case
+- 함수명: snake_case
+- 구조체: PascalCase
+
+## 참고 자료
 
 - 원본 Java/Android 코드: [GitHub - sigigi/dotnet_chunjiin](https://github.com/sigigi/dotnet_chunjiin)
-- 천지인 입력법: https://ko.wikipedia.org/wiki/천지인_(입력기)
-- 한글 유니코드: https://ko.wikipedia.org/wiki/한글_유니코드
+- 천지인 입력법: [Wikipedia - 천지인 (입력기)](https://ko.wikipedia.org/wiki/천지인_(입력기))
+- 한글 유니코드: [Wikipedia - 한글 유니코드](https://ko.wikipedia.org/wiki/한글_유니코드)
+- GTK3 문서: [GTK Documentation](https://docs.gtk.org/gtk3/)
+- 한글 자모 유니코드 범위:
+  - 초성: U+1100 ~ U+1112 (19자)
+  - 중성: U+1161 ~ U+1175 (21자)
+  - 종성: U+11A8 ~ U+11C2 (27자)
+  - 완성형: U+AC00 ~ U+D7A3 (11,172자)
+
+## 버전 히스토리
+
+### v1.0.0 (2025)
+- ✨ 초기 C/GTK3 포팅 완료
+- ✨ 한글, 영문, 숫자 입력 모드 구현
+- ✨ 11가지 겹받침 완벽 지원
+- 🐛 wchar_t to UTF-8 변환 이슈 수정
+- 📝 완전한 문서화
 
 ## 스크린샷
 
 애플리케이션은 다음을 포함합니다:
-- 상단: 제목 및 현재 입력 모드 표시
-- 중앙: 입력 텍스트 표시 영역 (스크롤 가능)
-- 하단: 0-9 숫자 키패드 (4x3 그리드)
-- 최하단: 모드 변경 및 전체 지우기 버튼
+- **상단**: 제목 및 현재 입력 모드 표시
+- **중앙**: 입력 텍스트 표시 영역 (스크롤 가능)
+- **하단**: 0-9 숫자 키패드 (4x3 그리드)
+- **최하단**: 모드 변경 및 전체 지우기 버튼
+
+## 라이선스 고지
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자유롭게 사용, 수정, 배포할 수 있습니다.
 
 ---
 
 Made with ❤️ using C and GTK3
+
+**Original Author**: KimYs (ZeDA) - [Blog](http://blog.naver.com/irineu2)
+**C/GTK Port**: Claude (Anthropic) - 2025
