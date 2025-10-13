@@ -73,7 +73,71 @@ void on_mode_button_clicked(GtkWidget *widget __attribute__((unused)), gpointer 
 // 텍스트 지우기 버튼
 void on_clear_clicked(GtkWidget *widget __attribute__((unused)), gpointer data) {
     AppWidgets *app = (AppWidgets *)data;
+    
+    // 현재 모드 저장
+    InputMode current_mode = app->state.now_mode;
+    
+    // 텍스트 지우기 (모드는 보존)
     chunjiin_init(&app->state);
+    app->state.now_mode = current_mode;  // 모드 복원
+    gtk_text_buffer_set_text(app->text_buffer, "", -1);
+}
+
+// 엔터 버튼 핸들러 - 결과 팝업 표시 후 텍스트 지우기
+void on_enter_clicked(GtkWidget *widget __attribute__((unused)), gpointer data) {
+    AppWidgets *app = (AppWidgets *)data;
+    
+    // 현재 모드 저장
+    InputMode current_mode = app->state.now_mode;
+    
+    // 현재 텍스트 가져오기
+    GtkTextIter start, end;
+    gtk_text_buffer_get_bounds(app->text_buffer, &start, &end);
+    gchar *text = gtk_text_buffer_get_text(app->text_buffer, &start, &end, FALSE);
+    
+    // 팝업 다이얼로그 생성
+    GtkWidget *dialog = gtk_dialog_new_with_buttons("입력 결과",
+                                                   GTK_WINDOW(app->window),
+                                                   GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+                                                   "확인", GTK_RESPONSE_OK,
+                                                   NULL);
+    
+    // 다이얼로그 크기 설정
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 200);
+    
+    // 메시지 레이블 생성
+    GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget *label = gtk_label_new(text);
+    gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_selectable(GTK_LABEL(label), TRUE);  // 텍스트 선택 가능
+    
+    // 레이블 폰트 설정
+    PangoFontDescription *font_desc = pango_font_description_from_string("Sans 14");
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    gtk_widget_override_font(label, font_desc);
+    #pragma GCC diagnostic pop
+    pango_font_description_free(font_desc);
+    
+    // 여백 설정
+    gtk_widget_set_margin_start(label, 20);
+    gtk_widget_set_margin_end(label, 20);
+    gtk_widget_set_margin_top(label, 20);
+    gtk_widget_set_margin_bottom(label, 20);
+    
+    gtk_container_add(GTK_CONTAINER(content_area), label);
+    
+    // 다이얼로그 표시
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+    
+    // 메모리 해제
+    g_free(text);
+    
+    // 텍스트 지우기 (모드는 보존)
+    chunjiin_init(&app->state);
+    app->state.now_mode = current_mode;  // 모드 복원
     gtk_text_buffer_set_text(app->text_buffer, "", -1);
 }
 
@@ -100,11 +164,6 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     gtk_label_set_markup(GTK_LABEL(title_label),
         "<span font='20' weight='bold'>천지인 한글 입력기</span>");
     gtk_box_pack_start(GTK_BOX(main_box), title_label, FALSE, FALSE, 0);
-
-    // 모드 변경 버튼 (상단 배치)
-    app->mode_button = gtk_button_new_with_label("모드 변경 (한글→ENG→eng→123→!@#)");
-    g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
-    gtk_box_pack_start(GTK_BOX(main_box), app->mode_button, FALSE, FALSE, 0);
 
     // 텍스트 뷰 (스크롤 가능)
     GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -167,11 +226,25 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
         if (utf8_text) g_free(utf8_text);
     }
 
-    // 전체 지우기 버튼을 그리드의 다섯째 행에 3칸 너비로 추가
-    GtkWidget *clear_button = gtk_button_new_with_label("전체 지우기");
-    gtk_widget_set_size_request(clear_button, -1, 80);
+    // 5번째 행에 3개의 버튼 추가: 모드, 지우기, 엔터
+    
+    // 모드 변경 버튼
+    app->mode_button = gtk_button_new_with_label("모드");
+    gtk_widget_set_size_request(app->mode_button, 100, 80);
+    g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
+    gtk_grid_attach(GTK_GRID(button_grid), app->mode_button, 0, 4, 1, 1);
+    
+    // 지우기 버튼
+    GtkWidget *clear_button = gtk_button_new_with_label("지우기");
+    gtk_widget_set_size_request(clear_button, 100, 80);
     g_signal_connect(clear_button, "clicked", G_CALLBACK(on_clear_clicked), app);
-    gtk_grid_attach(GTK_GRID(button_grid), clear_button, 0, 4, 3, 1);
+    gtk_grid_attach(GTK_GRID(button_grid), clear_button, 1, 4, 1, 1);
+    
+    // 엔터 버튼
+    GtkWidget *enter_button = gtk_button_new_with_label("엔터");
+    gtk_widget_set_size_request(enter_button, 100, 80);
+    g_signal_connect(enter_button, "clicked", G_CALLBACK(on_enter_clicked), app);
+    gtk_grid_attach(GTK_GRID(button_grid), enter_button, 2, 4, 1, 1);
 
     // 정보 레이블
     GtkWidget *info_label = gtk_label_new(NULL);
@@ -187,7 +260,7 @@ int main(int argc, char **argv) {
     // 로케일 설정
     setlocale(LC_ALL, "");
 
-    GtkApplication *app = gtk_application_new("com.personal.chunjiin", G_APPLICATION_FLAGS_NONE);
+    GtkApplication *app = gtk_application_new("com.personal.chunjiin", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
