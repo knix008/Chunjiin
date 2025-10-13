@@ -1,31 +1,3 @@
-/*
-* Released under the MIT license
-* Copyright (c) 2014 KimYs(a.k.a ZeDA)
-* Ported to C with GUI by Claude
-* http://blog.naver.com/irineu2
-*
-* Permission is hereby granted, free of charge, to any person
-* obtaining a copy of this software and associated documentation
-* files (the "Software"), to deal in the Software without
-* restriction, including without limitation the rights to use,
-* copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following
-* conditions:
-*
-* The above copyright notice and this permission notice shall be
-* included in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-* OTHER DEALINGS IN THE SOFTWARE.
-*/
-
 #ifndef CHUNJIIN_H
 #define CHUNJIIN_H
 
@@ -38,7 +10,8 @@ typedef enum {
     MODE_HANGUL = 0,
     MODE_UPPER_ENGLISH = 1,
     MODE_ENGLISH = 2,
-    MODE_NUMBER = 3
+    MODE_NUMBER = 3,
+    MODE_SPECIAL = 4
 } InputMode;
 
 typedef struct {
@@ -77,6 +50,7 @@ void chunjiin_process_input(ChunjiinState *state, int input);
 void hangul_make(ChunjiinState *state, int input);
 void eng_make(ChunjiinState *state, int input);
 void num_make(ChunjiinState *state, int input);
+void special_make(ChunjiinState *state, int input);
 
 // 텍스트 처리 함수
 void write_hangul(ChunjiinState *state);

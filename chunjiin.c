@@ -1,9 +1,3 @@
-/*
-* Released under the MIT license
-* Copyright (c) 2014 KimYs(a.k.a ZeDA)
-* Ported to C with GUI by Claude
-*/
-
 #include "chunjiin.h"
 #include <string.h>
 #include <stdio.h>
@@ -45,8 +39,11 @@ void chunjiin_process_input(ChunjiinState *state, int input) {
     } else if (state->now_mode == MODE_ENGLISH || state->now_mode == MODE_UPPER_ENGLISH) {
         eng_make(state, input);
         write_engnum(state);
-    } else { // MODE_NUMBER
+    } else if (state->now_mode == MODE_NUMBER) {
         num_make(state, input);
+        write_engnum(state);
+    } else { // MODE_SPECIAL
+        special_make(state, input);
         write_engnum(state);
     }
 }
@@ -187,7 +184,7 @@ void check_double(const wchar_t *jong, const wchar_t *jong2, wchar_t *result) {
 }
 
 void change_mode(ChunjiinState *state) {
-    state->now_mode = (state->now_mode == MODE_NUMBER) ? MODE_HANGUL : state->now_mode + 1;
+    state->now_mode = (state->now_mode == MODE_SPECIAL) ? MODE_HANGUL : state->now_mode + 1;
     hangul_init(&state->hangul);
     init_engnum(state);
     if (state->now_mode == MODE_UPPER_ENGLISH) {
@@ -218,6 +215,11 @@ const wchar_t* get_button_text(InputMode mode, int button_num) {
         L"5", L"6", L"7", L"8", L"9",
         L"Space", L"Del"
     };
+    static const wchar_t *special_texts[] = {
+        L"~`^", L"!@#", L"$%&", L"*()=", L"+{}",
+        L"[]=", L"<>|", L"-_", L":;", L"\"'/",
+        L"Space", L"Del"
+    };
 
     if (button_num < 0 || button_num > 11) return L"";
 
@@ -226,6 +228,7 @@ const wchar_t* get_button_text(InputMode mode, int button_num) {
         case MODE_UPPER_ENGLISH: return upper_eng_texts[button_num];
         case MODE_ENGLISH: return lower_eng_texts[button_num];
         case MODE_NUMBER: return number_texts[button_num];
+        case MODE_SPECIAL: return special_texts[button_num];
         default: return L"";
     }
 }

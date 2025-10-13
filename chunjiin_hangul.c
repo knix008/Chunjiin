@@ -1,31 +1,3 @@
-/*
-* Released under the MIT license
-* Copyright (c) 2014 KimYs(a.k.a ZeDA)
-* Ported to C by Claude
-* http://blog.naver.com/irineu2
-*
-* Permission is hereby granted, free of charge, to any person
-* obtaining a copy of this software and associated documentation
-* files (the "Software"), to deal in the Software without
-* restriction, including without limitation the rights to use,
-* copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following
-* conditions:
-*
-* The above copyright notice and this permission notice shall be
-* included in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-* OTHER DEALINGS IN THE SOFTWARE.
-*/
-
 #include "chunjiin.h"
 #include <string.h>
 #include <wchar.h>
@@ -49,6 +21,62 @@ void num_make(ChunjiinState *state, int input) {
     }
 
     state->flag_initengnum = true;
+}
+
+// special_make function for special characters
+void special_make(ChunjiinState *state, int input) {
+    if (input == 10) { // Space
+        if (wcslen(state->engnum) == 0) {
+            wcscpy(state->engnum, L" ");
+        } else {
+            state->engnum[0] = 0;
+        }
+        state->flag_initengnum = true;
+    } else if (input == 11) { // Delete
+        delete_char(state);
+        init_engnum(state);
+    } else {
+        const wchar_t *str = L"";
+        switch (input) {
+            case 0: str = L"~`^"; break;
+            case 1: str = L"!@#"; break;
+            case 2: str = L"$%&"; break;
+            case 3: str = L"*()"; break;
+            case 4: str = L"+{}"; break;
+            case 5: str = L"[]="; break;
+            case 6: str = L"<>|"; break;
+            case 7: str = L"-_"; break;
+            case 8: str = L":;"; break;
+            case 9: str = L"\"'/"; break;
+            default: return;
+        }
+
+        wchar_t ch[4];
+        ch[0] = str[0];
+        ch[1] = str[1];
+        ch[2] = str[2];
+        ch[3] = 0;
+
+        if (wcslen(state->engnum) == 0) {
+            state->engnum[0] = ch[0];
+            state->engnum[1] = 0;
+        } else if (state->engnum[0] == ch[0]) {
+            state->engnum[0] = ch[1];
+            state->engnum[1] = 0;
+            state->flag_engdelete = true;
+        } else if (state->engnum[0] == ch[1]) {
+            state->engnum[0] = ch[2];
+            state->engnum[1] = 0;
+            state->flag_engdelete = true;
+        } else if (state->engnum[0] == ch[2]) {
+            state->engnum[0] = ch[0];
+            state->engnum[1] = 0;
+            state->flag_engdelete = true;
+        } else {
+            state->engnum[0] = ch[0];
+            state->engnum[1] = 0;
+        }
+    }
 }
 
 // eng_make function (lines 325-380 in Java)

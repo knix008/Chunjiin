@@ -13,7 +13,6 @@ typedef struct {
     GtkTextBuffer *text_buffer;
     GtkWidget *buttons[12];
     GtkWidget *mode_button;
-    GtkWidget *mode_label;
     ChunjiinState state;
 } AppWidgets;
 
@@ -61,26 +60,9 @@ void on_mode_button_clicked(GtkWidget *widget __attribute__((unused)), gpointer 
 
     change_mode(&app->state);
 
-    // 모드 레이블 업데이트
-    const char *mode_text = "";
-    switch (app->state.now_mode) {
-        case MODE_HANGUL:
-            mode_text = "Mode: 한글";
-            break;
-        case MODE_UPPER_ENGLISH:
-            mode_text = "Mode: ENG (Upper)";
-            break;
-        case MODE_ENGLISH:
-            mode_text = "Mode: eng (lower)";
-            break;
-        case MODE_NUMBER:
-            mode_text = "Mode: 123";
-            break;
-    }
-    gtk_label_set_text(GTK_LABEL(app->mode_label), mode_text);
-
     // 버튼 텍스트 업데이트
     for (int i = 0; i < 12; i++) {
+        if (app->buttons[i] == NULL) continue;
         const wchar_t *wtext = get_button_text(app->state.now_mode, i);
         gchar *utf8_text = wchar_to_utf8(wtext, 20);
         gtk_button_set_label(GTK_BUTTON(app->buttons[i]), utf8_text);
@@ -102,7 +84,7 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     // 메인 윈도우 생성
     app->window = gtk_application_window_new(app_gtk);
     gtk_window_set_title(GTK_WINDOW(app->window), "천지인 한글 입력기");
-    gtk_window_set_default_size(GTK_WINDOW(app->window), 500, 600);
+    gtk_window_set_default_size(GTK_WINDOW(app->window), 320, 640);
     gtk_window_set_resizable(GTK_WINDOW(app->window), FALSE);
 
     // 메인 박스
@@ -119,14 +101,10 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
         "<span font='20' weight='bold'>천지인 한글 입력기</span>");
     gtk_box_pack_start(GTK_BOX(main_box), title_label, FALSE, FALSE, 0);
 
-    // 모드 표시 레이블
-    app->mode_label = gtk_label_new("Mode: 한글");
-    PangoAttrList *attrs = pango_attr_list_new();
-    pango_attr_list_insert(attrs, pango_attr_weight_new(PANGO_WEIGHT_BOLD));
-    pango_attr_list_insert(attrs, pango_attr_scale_new(1.3));
-    gtk_label_set_attributes(GTK_LABEL(app->mode_label), attrs);
-    pango_attr_list_unref(attrs);
-    gtk_box_pack_start(GTK_BOX(main_box), app->mode_label, FALSE, FALSE, 0);
+    // 모드 변경 버튼 (상단 배치)
+    app->mode_button = gtk_button_new_with_label("모드 변경 (한글→ENG→eng→123→!@#)");
+    g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
+    gtk_box_pack_start(GTK_BOX(main_box), app->mode_button, FALSE, FALSE, 0);
 
     // 텍스트 뷰 (스크롤 가능)
     GtkWidget *scrolled_window = gtk_scrolled_window_new(NULL, NULL);
@@ -158,13 +136,18 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     gtk_widget_set_vexpand(button_grid, TRUE);
     gtk_box_pack_start(GTK_BOX(main_box), button_grid, TRUE, TRUE, 0);
 
-    // 버튼 1-9, 0 생성
+    // 버튼 배치: 각 행에 3개씩
+    // 1행: 천(1), 지(2), 인(3)
+    // 2행: ㄱ(4), ㄴ(5), ㄷ(6)
+    // 3행: ㅂ(7), ㅅ(8), ㅈ(9)
+    // 4행: 공백(10), ㅇㅁ(0), 삭제(11)
+    // 5행: 전체지우기 (3칸 너비)
     int positions[12][2] = {
-        {3, 0}, // 0
-        {0, 0}, {1, 0}, {2, 0}, // 1-3
-        {0, 1}, {1, 1}, {2, 1}, // 4-6
-        {0, 2}, {1, 2}, {2, 2}, // 7-9
-        {3, 1}, {3, 2}  // 10(Space), 11(Del)
+        {1, 3}, // 0: 넷째 행 중앙 (ㅇㅁ)
+        {0, 0}, {1, 0}, {2, 0}, // 1-3: 첫째 행 (천, 지, 인)
+        {0, 1}, {1, 1}, {2, 1}, // 4-6: 둘째 행 (ㄱ, ㄴ, ㄷ)
+        {0, 2}, {1, 2}, {2, 2}, // 7-9: 셋째 행 (ㅂ, ㅅ, ㅈ)
+        {0, 3}, {2, 3}  // 10-11: 넷째 행 (Space, Del)
     };
 
     for (int i = 0; i < 12; i++) {
@@ -184,26 +167,16 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
         if (utf8_text) g_free(utf8_text);
     }
 
-    // 하단 컨트롤 버튼들
-    GtkWidget *control_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    gtk_box_set_homogeneous(GTK_BOX(control_box), TRUE);
-    gtk_box_pack_start(GTK_BOX(main_box), control_box, FALSE, FALSE, 0);
-
-    // 모드 변경 버튼
-    app->mode_button = gtk_button_new_with_label("모드 변경 (한글→ENG→eng→123)");
-    g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
-    gtk_box_pack_start(GTK_BOX(control_box), app->mode_button, TRUE, TRUE, 0);
-
-    // 전체 지우기 버튼
+    // 전체 지우기 버튼을 그리드의 다섯째 행에 3칸 너비로 추가
     GtkWidget *clear_button = gtk_button_new_with_label("전체 지우기");
+    gtk_widget_set_size_request(clear_button, -1, 80);
     g_signal_connect(clear_button, "clicked", G_CALLBACK(on_clear_clicked), app);
-    gtk_box_pack_start(GTK_BOX(control_box), clear_button, TRUE, TRUE, 0);
+    gtk_grid_attach(GTK_GRID(button_grid), clear_button, 0, 4, 3, 1);
 
     // 정보 레이블
     GtkWidget *info_label = gtk_label_new(NULL);
     gtk_label_set_markup(GTK_LABEL(info_label),
-        "<span size='small'>천지인 한글 입력 방식 - MIT License\n"
-        "Original by KimYs (ZeDA), C/GTK port by Claude</span>");
+        "<span size='small'>천지인 한글 입력 방식 - MIT License</span>");
     gtk_label_set_justify(GTK_LABEL(info_label), GTK_JUSTIFY_CENTER);
     gtk_box_pack_start(GTK_BOX(main_box), info_label, FALSE, FALSE, 0);
 
@@ -214,7 +187,7 @@ int main(int argc, char **argv) {
     // 로케일 설정
     setlocale(LC_ALL, "");
 
-    GtkApplication *app = gtk_application_new("com.zeda.chunjiin", G_APPLICATION_FLAGS_NONE);
+    GtkApplication *app = gtk_application_new("com.personal.chunjiin", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);
