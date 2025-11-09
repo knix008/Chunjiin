@@ -115,7 +115,7 @@ void on_mode_button_clicked(GtkWidget *widget __attribute__((unused)), gpointer 
         gtk_button_set_label(GTK_BUTTON(app->buttons[i]), utf8_text);
 
         // 폰트 재적용 (레이블이 새로 생성될 수 있으므로)
-        apply_button_font(app->buttons[i], "NanumGothicCoding", 16);
+        apply_button_font(app->buttons[i], "NanumGothicCoding", 20);
 
         g_free(utf8_text);
     }
@@ -229,7 +229,7 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     // CSS를 사용하여 텍스트 뷰 폰트 설정
     GtkCssProvider *text_view_css = gtk_css_provider_new();
     gtk_css_provider_load_from_data(text_view_css,
-        "textview { font-family: 'NanumGothicCoding'; font-size: 16px; }",
+        "textview { font-family: 'NanumGothicCoding'; font-size: 20px; }",
         -1, NULL);
     GtkStyleContext *text_view_context = gtk_widget_get_style_context(app->text_view);
     gtk_style_context_add_provider(text_view_context, GTK_STYLE_PROVIDER(text_view_css),
@@ -269,7 +269,7 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
         gtk_widget_set_size_request(app->buttons[i], 100, 80);
 
         // CSS를 사용한 폰트 적용 (버튼 레이블)
-        apply_button_font(app->buttons[i], "NanumGothicCoding", 16);
+        apply_button_font(app->buttons[i], "NanumGothicCoding", 20);
 
         // 버튼에 번호 저장
         g_object_set_data(G_OBJECT(app->buttons[i]), "button_num", GINT_TO_POINTER(i));
@@ -286,21 +286,21 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     // 모드 변경 버튼
     app->mode_button = gtk_button_new_with_label("모드");
     gtk_widget_set_size_request(app->mode_button, 100, 80);
-    apply_button_font(app->mode_button, "NanumGothicCoding", 16);
+    apply_button_font(app->mode_button, "NanumGothicCoding", 20);
     g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), app->mode_button, 0, 4, 1, 1);
 
     // 지우기 버튼
     GtkWidget *clear_button = gtk_button_new_with_label("지우기");
     gtk_widget_set_size_request(clear_button, 100, 80);
-    apply_button_font(clear_button, "NanumGothicCoding", 16);
+    apply_button_font(clear_button, "NanumGothicCoding", 20);
     g_signal_connect(clear_button, "clicked", G_CALLBACK(on_clear_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), clear_button, 1, 4, 1, 1);
 
     // 엔터 버튼
     GtkWidget *enter_button = gtk_button_new_with_label("엔터");
     gtk_widget_set_size_request(enter_button, 100, 80);
-    apply_button_font(enter_button, "NanumGothicCoding", 16);
+    apply_button_font(enter_button, "NanumGothicCoding", 20);
     g_signal_connect(enter_button, "clicked", G_CALLBACK(on_enter_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), enter_button, 2, 4, 1, 1);
 
