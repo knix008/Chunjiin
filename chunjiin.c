@@ -122,7 +122,9 @@ int get_unicode(HangulState *hangul, const wchar_t *real_jong) {
     else jung = 20; // ㅣ
 
     if (wcslen(hangul->chosung) == 0 && wcslen(hangul->jongsung) == 0) {
-        return 0x1161 + jung;
+        // Use Hangul Compatibility Jamo (U+314F+) for standalone vowels
+        // for consistent font size display
+        return 0x314F + jung;
     }
 
     // 종성 처리
