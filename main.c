@@ -5,7 +5,12 @@
 
 #include <gtk/gtk.h>
 #include <locale.h>
+#include <glib.h>
+#include <fontconfig/fontconfig.h>
 #include "chunjiin.h"
+
+// 폰트 설정을 위한 CSS Provider
+static GtkCssProvider *css_provider = NULL;
 
 typedef struct {
     GtkWidget *window;
@@ -15,6 +20,69 @@ typedef struct {
     GtkWidget *mode_button;
     ChunjiinState state;
 } AppWidgets;
+
+// 한글 폰트 로드 함수 - FcConfig를 사용하여 폰트 등록
+void load_korean_font(void) {
+    // 현재 실행 파일의 경로 가져오기
+    gchar *exe_path = g_file_read_link("/proc/self/exe", NULL);
+    gchar *exe_dir = NULL;
+    if (exe_path) {
+        exe_dir = g_path_get_dirname(exe_path);
+        g_free(exe_path);
+    } else {
+        exe_dir = g_get_current_dir();
+    }
+
+    // 폰트 파일 경로 생성
+    gchar *font_path = g_build_filename(exe_dir, "Font", "NanumGothicCoding.ttf", NULL);
+    gchar *font_path_bold = g_build_filename(exe_dir, "Font", "NanumGothicCoding-Bold.ttf", NULL);
+
+    // fontconfig를 사용하여 폰트 추가
+    FcConfig *config = FcConfigGetCurrent();
+    FcConfigAppFontAddFile(config, (const FcChar8 *)font_path);
+    FcConfigAppFontAddFile(config, (const FcChar8 *)font_path_bold);
+
+    // 메모리 해제
+    g_free(font_path);
+    g_free(font_path_bold);
+    g_free(exe_dir);
+
+    // CSS Provider 생성 - 간단한 CSS로 폰트 패밀리만 지정
+    css_provider = gtk_css_provider_new();
+
+    const gchar *css_data =
+        "label {\n"
+        "  font-family: 'NanumGothicCoding';\n"
+        "}\n"
+        ".dialog-label {\n"
+        "  font-family: 'NanumGothicCoding';\n"
+        "  font-size: 14px;\n"
+        "}\n";
+
+    // CSS 로드
+    GError *error = NULL;
+    gtk_css_provider_load_from_data(css_provider, css_data, -1, &error);
+    if (error) {
+        g_warning("CSS 로드 실패: %s", error->message);
+        g_error_free(error);
+    } else {
+        // 스크린에 CSS 적용
+        GdkScreen *screen = gdk_screen_get_default();
+        gtk_style_context_add_provider_for_screen(screen,
+                                                  GTK_STYLE_PROVIDER(css_provider),
+                                                  GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+}
+
+// Pango 폰트를 위젯에 적용하는 헬퍼 함수
+void apply_pango_font(GtkWidget *widget, const gchar *font_desc_str) {
+    PangoFontDescription *font_desc = pango_font_description_from_string(font_desc_str);
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    gtk_widget_override_font(widget, font_desc);
+    #pragma GCC diagnostic pop
+    pango_font_description_free(font_desc);
+}
 
 // wchar_t 버퍼를 UTF-8 문자열로 변환하는 헬퍼 함수
 // Linux에서 wchar_t는 UTF-32 (4바이트)이므로 직접 변환 필요
@@ -66,6 +134,11 @@ void on_mode_button_clicked(GtkWidget *widget __attribute__((unused)), gpointer 
         const wchar_t *wtext = get_button_text(app->state.now_mode, i);
         gchar *utf8_text = wchar_to_utf8(wtext, 20);
         gtk_button_set_label(GTK_BUTTON(app->buttons[i]), utf8_text);
+
+        // 폰트 재적용 (레이블이 새로 생성될 수 있으므로)
+        GtkWidget *label = gtk_bin_get_child(GTK_BIN(app->buttons[i]));
+        apply_pango_font(label, "NanumGothicCoding Bold 14");
+
         g_free(utf8_text);
     }
 }
@@ -110,14 +183,10 @@ void on_enter_clicked(GtkWidget *widget __attribute__((unused)), gpointer data) 
     GtkWidget *label = gtk_label_new(text);
     gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
     gtk_label_set_selectable(GTK_LABEL(label), TRUE);  // 텍스트 선택 가능
-    
-    // 레이블 폰트 설정
-    PangoFontDescription *font_desc = pango_font_description_from_string("Sans 14");
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    gtk_widget_override_font(label, font_desc);
-    #pragma GCC diagnostic pop
-    pango_font_description_free(font_desc);
+
+    // 레이블에 CSS 클래스 적용
+    GtkStyleContext *context = gtk_widget_get_style_context(label);
+    gtk_style_context_add_class(context, "dialog-label");
     
     // 여백 설정
     gtk_widget_set_margin_start(label, 20);
@@ -142,6 +211,9 @@ void on_enter_clicked(GtkWidget *widget __attribute__((unused)), gpointer data) 
 }
 
 void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused))) {
+    // 한글 폰트 로드
+    load_korean_font();
+
     AppWidgets *app = g_new0(AppWidgets, 1);
     chunjiin_init(&app->state);
 
@@ -176,13 +248,8 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(app->text_view), GTK_WRAP_WORD_CHAR);
     app->text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(app->text_view));
 
-    // 텍스트 뷰 폰트 설정
-    PangoFontDescription *font_desc = pango_font_description_from_string("Sans 14");
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    gtk_widget_override_font(app->text_view, font_desc);
-    #pragma GCC diagnostic pop
-    pango_font_description_free(font_desc);
+    // Pango 폰트 적용 (텍스트 출력 영역)
+    apply_pango_font(app->text_view, "NanumGothicCoding 16");
 
     gtk_container_add(GTK_CONTAINER(scrolled_window), app->text_view);
     gtk_box_pack_start(GTK_BOX(main_box), scrolled_window, TRUE, TRUE, 0);
@@ -216,6 +283,10 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
         app->buttons[i] = gtk_button_new_with_label(utf8_text ? utf8_text : "");
         gtk_widget_set_size_request(app->buttons[i], 100, 80);
 
+        // Pango 폰트 적용 (버튼 레이블)
+        GtkWidget *label = gtk_bin_get_child(GTK_BIN(app->buttons[i]));
+        apply_pango_font(label, "NanumGothicCoding Bold 14");
+
         // 버튼에 번호 저장
         g_object_set_data(G_OBJECT(app->buttons[i]), "button_num", GINT_TO_POINTER(i));
         g_signal_connect(app->buttons[i], "clicked", G_CALLBACK(on_button_clicked), app);
@@ -231,18 +302,21 @@ void activate(GtkApplication *app_gtk, gpointer user_data __attribute__((unused)
     // 모드 변경 버튼
     app->mode_button = gtk_button_new_with_label("모드");
     gtk_widget_set_size_request(app->mode_button, 100, 80);
+    apply_pango_font(gtk_bin_get_child(GTK_BIN(app->mode_button)), "NanumGothicCoding Bold 14");
     g_signal_connect(app->mode_button, "clicked", G_CALLBACK(on_mode_button_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), app->mode_button, 0, 4, 1, 1);
-    
+
     // 지우기 버튼
     GtkWidget *clear_button = gtk_button_new_with_label("지우기");
     gtk_widget_set_size_request(clear_button, 100, 80);
+    apply_pango_font(gtk_bin_get_child(GTK_BIN(clear_button)), "NanumGothicCoding Bold 14");
     g_signal_connect(clear_button, "clicked", G_CALLBACK(on_clear_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), clear_button, 1, 4, 1, 1);
-    
+
     // 엔터 버튼
     GtkWidget *enter_button = gtk_button_new_with_label("엔터");
     gtk_widget_set_size_request(enter_button, 100, 80);
+    apply_pango_font(gtk_bin_get_child(GTK_BIN(enter_button)), "NanumGothicCoding Bold 14");
     g_signal_connect(enter_button, "clicked", G_CALLBACK(on_enter_clicked), app);
     gtk_grid_attach(GTK_GRID(button_grid), enter_button, 2, 4, 1, 1);
 
